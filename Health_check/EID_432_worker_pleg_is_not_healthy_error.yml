@@ -1,0 +1,54 @@
+---
+- name: Worker PLEG is not healthy Error Check
+  hosts: remote_machines
+  gather_facts: no
+  vars_files:
+    - vars_working.yml
+
+  vars:
+    additional_info: []
+    GENERATE_EVENT: false
+
+  tasks:
+
+  - name: Check for PLEG is not healthy errors in kubelet logs
+    raw: zcat /var/log/pf9/kubelet/kubelet.*.root.log.ERROR*.gz | grep -aic 'PLEG is not healthy'
+    become: true
+    register: pleg_error_count
+    changed_when: false
+    failed_when: false
+
+#  - name: Stub PLEG error count for testing
+#    set_fact:
+#      pleg_error_count:
+#        stdout: "5"
+
+  - name: Set NOK if PLEG errors are found
+    set_fact:
+      additional_info: >-
+        {{
+          [{
+            'INFO': 'PLEG is not healthy error count = ' + pleg_error_count.stdout,
+            'STATE': 'NOK',
+            'CHECK': 'Worker PLEG is not healthy Error Check'
+          }]
+        }}
+      GENERATE_EVENT: true
+    when: pleg_error_count.stdout | int > 0
+
+  - name: Set OK status if no PLEG errors
+    set_fact:
+      additional_info: >-
+        [{
+          'INFO': '',
+          'STATE': 'OK',
+          'CHECK': 'Worker PLEG is not healthy Error Check'
+        }]
+    when: pleg_error_count.stdout | int == 0
+
+  - name: STATUS
+    debug:
+      msg:
+        GENERATE_EVENT: "{{ GENERATE_EVENT }}"
+        Additional_Info: "{{ additional_info }}"
+

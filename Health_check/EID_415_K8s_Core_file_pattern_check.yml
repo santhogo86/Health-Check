@@ -1,0 +1,23 @@
+---
+- name: Check Core File Pattern
+  hosts: remote_machines
+  vars:
+    expected_core_pattern: "/opt/mwp_corefile_save.sh %e %h %t %u %p %s"
+  tasks:
+    - name: Get current core pattern
+      raw: cat /proc/sys/kernel/core_pattern
+      register: current_core_pattern
+
+    - name: Check core pattern
+      set_fact:
+        core_pattern_status: "{{ 'OK' if current_core_pattern.stdout.strip() == expected_core_pattern else 'NOK' }}"
+
+    - name: Set additional info
+      set_fact:
+        additional_info: "{{ [{'CHECK': 'Core file pattern check', 'STATE': core_pattern_status, 'INFO': current_core_pattern.stdout.strip()}] }}"
+
+    - name: Print STATUS
+      debug:
+        msg:
+          GENERATE_EVENT: "{{ core_pattern_status == 'NOK' }}"
+          Additional Info: "{{ additional_info | to_json }}"

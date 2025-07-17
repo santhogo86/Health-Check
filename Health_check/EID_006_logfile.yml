@@ -1,0 +1,31 @@
+---
+- name: "{{ EID_006_DESCRIPTION }}"
+  hosts: remote_machines
+  gather_facts: no
+  vars_files:
+    - vars_working.yml
+
+  tasks:
+    - name: Get log config level
+      raw: kubectl exec {{ pod_name }} -n {{ namespace }} -- {{ EID_006_CMD }}
+      register: log_config_level
+
+    - name: Check log config level
+      set_fact:
+        generate_event: "{{ 'LOG_CONFIG_LEVEL_DEBUG' in log_config_level.stdout }}"
+
+    - name: Set additional info
+      set_fact:
+        additional_info: >-
+          {% if 'LOG_CONFIG_LEVEL_DEBUG' in log_config_level.stdout %}
+          LOG_CONFIG_LEVEL_DEBUG set
+          {% endif %}
+
+    - name: STATUS
+      debug:
+        msg:
+          {
+            "GENERATE_EVENT": "{{ generate_event }}",
+            "Additional Info": "{{ additional_info | default('') }}"
+          }
+

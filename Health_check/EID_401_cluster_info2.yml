@@ -1,0 +1,21 @@
+---
+- name: Check Cluster Info
+  hosts: remote_machines
+  gather_facts: no
+  vars_files:
+    - vars_working.yml
+  tasks:
+    - name: Get cluster info
+      raw: kubectl cluster-info
+      register: cluster_info
+      ignore_errors: yes
+
+    - name: Check cluster services
+      debug:
+        msg:
+          GENERATE_EVENT: "{{ generate_event }}"
+          Additional Info: "{{ additional_info | to_json }}"
+      vars:
+        generate_event: "{{ services_not_running | length > 0 }}"
+        additional_info: "{{ services_not_running }}"
+        services_not_running: "{{ CHECK_401_CLUSTER_SERVICE_LIST.split('|') | map('regex_replace', '^(.*)$', '{\"service\": \"\\1\", \"status\": \"NOK\"}') | list | selectattr('service', 'not in', cluster_info.stdout | regex_findall('(.*) is running')) }}"

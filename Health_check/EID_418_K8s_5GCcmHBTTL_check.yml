@@ -1,0 +1,68 @@
+---
+- name: Check K8s 5GCcmHBTTL
+  hosts: remote_machines
+  vars:
+    CHECK_418_K8S_5GC_NAMESPACE_FILTER: "^mvnr-mtcilsdc-appln-ric"
+    CHECK_418_TTL_INTERVAL: 1
+    CHECK_418_HEARTBEAT_INTERVAL: 250
+  tasks:
+    - name: Get namespaces
+      shell: kubectl get ns --no-headers | awk '{print $1}' | grep -E "{{ CHECK_418_K8S_5GC_NAMESPACE_FILTER }}"
+      register: namespaces
+
+    - name: Print namespaces
+      debug:
+        var: namespaces
+
+    - name: Get TTL interval
+      shell: 'kubectl get configmaps -n {{ item }} -o yaml | grep -Po "ttl_timeout.*\".*" | cut -d"," -f1 | cut -d" " -f2 | cut -d\\ -f1 | uniq'
+      register: ttl_output
+      loop: "{{ namespaces.stdout_lines }}"
+      ignore_errors: true
+
+    - name: Print ttl_output
+      debug:
+        var: ttl_output
+
+
+    - name: Get HB interval
+      shell: 'kubectl get configmaps -n {{ item }} -o yaml | grep -Po "hb_interval.*\".*" | cut -d"," -f1 | cut -d" " -f2 | uniq'
+      register: hb_output
+      loop: "{{ namespaces.stdout_lines }}"
+      ignore_errors: true
+
+    - name: Print hb_output
+      debug:
+        var: hb_output
+
+    - name: Initialize additional_info
+      set_fact:
+        additional_info: []
+
+    - name: Debug
+      debug:
+        msg: "hb_output: {{ item.0.stdout }}, ttl_output: {{ item.1.stdout }}"
+      loop: "{{ hb_output.results | zip(ttl_output.results) | list }}"
+
+    - name: Set status and additional info
+      set_fact:
+        additional_info: "{{ additional_info + [ 'Heartbeat Interval/TTL timeout of ' + item.0.item + ' is NOK' ] }}"
+      loop: "{{ hb_output.results | zip(ttl_output.results) | list }}"
+      when:
+        - item.0.stdout is defined
+        - item.1.stdout is defined
+        - (item.0.stdout | int) != CHECK_418_HEARTBEAT_INTERVAL or (item.1.stdout | int) != CHECK_418_TTL_INTERVAL
+
+    - name: Print additional_info
+      debug:
+        var: additional_info
+
+    - name: Set GENERATE_EVENT
+      set_fact:
+        GENERATE_EVENT: "{{ additional_info | length > 0 }}"
+
+    - name: Print STATUS
+      debug:
+        msg:
+          GENERATE_EVENT: "{{ GENERATE_EVENT }}"
+          Additional Info: "{{ additional_info | join(', ') }}"

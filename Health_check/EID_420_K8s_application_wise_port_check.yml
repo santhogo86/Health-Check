@@ -1,0 +1,53 @@
+---
+- name: K8s Application-wise Port Check
+  hosts: remote_machines
+  gather_facts: no
+  vars_files:
+    - vars_working.yml
+
+  vars:
+    CHECK_420_CONN_THRESHOLD: 16
+    additional_info: []
+    GENERATE_EVENT: false
+
+  tasks:
+  - name: Get established connection count on ports 8082 or 443
+    raw: kubectl exec {{ pod_name_gtre }} -n {{ namespace }} -- netstat -anW 2>/dev/null | grep -E ":8082 |:443" | grep EST | wc -l
+    register: conn_count
+    changed_when: false
+
+#  - name: Stub connection count to match threshold (for testing)
+#    set_fact:
+#      conn_count:
+#        stdout: "{{ CHECK_420_CONN_THRESHOLD | string }}"
+
+  - name: Set additional info based on connection count
+    set_fact:
+      additional_info: >-
+        {{
+          [{
+            'INFO': 'Connection count is ' + conn_count.stdout + ' [ Expected: ' + CHECK_420_CONN_THRESHOLD | string + ' ]',
+            'STATE': 'NOK',
+            'CHECK': 'K8s App wise port check'
+          }]
+        }}
+      GENERATE_EVENT: true
+    when: conn_count.stdout | int != CHECK_420_CONN_THRESHOLD
+
+  - name: Set OK status if connection count matches threshold
+    set_fact:
+      additional_info: >-
+        {{
+          [{
+            'INFO': '',
+            'STATE': 'OK',
+            'CHECK': 'K8s App wise port check'
+          }]
+        }}
+    when: conn_count.stdout | int == CHECK_420_CONN_THRESHOLD
+
+  - name: STATUS
+    debug:
+      msg:
+        GENERATE_EVENT: "{{ GENERATE_EVENT }}"
+        Additional_Info: "{{ additional_info }}"

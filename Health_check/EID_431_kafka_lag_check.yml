@@ -1,0 +1,158 @@
+---
+- name: Kafka Topic Lag Check
+  hosts: remote_machines
+  gather_facts: no
+  vars_files:
+    - vars_working.yml
+
+  vars:
+    CHECK_431_KAFKA_LAG_COUNT_THRESHOLD: 0
+    additional_info: []
+    GENERATE_EVENT: false
+
+  tasks:
+
+  - name: Get XA namespace
+    shell: kubectl get ns | grep '\-xa' | awk '{print $1}'
+    register: xa_ns
+    changed_when: false
+    failed_when: false
+
+  - name: Stub XA namespace to be single
+    set_fact:
+      xa_ns:
+        stdout: "lrb-267-cdb-xa"
+        stdout_lines: "lrb-267-cdb-xa"
+
+  - name: Print xa_ns
+    debug:
+      var: xa_ns
+
+  - name: Fail if no XA namespace found
+    set_fact:
+      additional_info: >-
+        [{
+          'INFO': "XA namespace doesn't exist",
+          'STATE': 'NOK',
+          'CHECK': 'Kafka Topic Lag Check'
+        }]
+      GENERATE_EVENT: true
+    when: xa_ns.stdout_lines | length == 0
+
+  - name: Print xa_ns.stdout_lines
+    debug:
+      msg: 
+        xa_ns.stdout_lines: "{{ xa_ns.stdout_lines }}"
+
+  - name: Set failure info before stopping
+    set_fact:
+      additional_info:
+        - INFO: "Multiple XA namespaces exist."
+          STATE: "NOK"
+          CHECK: "Kafka Topic Lag Check"
+      GENERATE_EVENT: true
+    when: xa_ns.stdout.split('\n') | length > 1
+    #when: xa_ns.stdout_lines | length > 1
+
+  - name: Stop execution due to multiple XA namespaces
+    fail:
+      msg: "{{ additional_info[0]['INFO'] }}"
+    when: xa_ns.stdout.split('\n') | length > 1
+    #when: xa_ns.stdout_lines | length > 1
+
+  - name: Print xa_ns
+    debug:
+      msg:
+        GENERATE_EVENT: "{{ GENERATE_EVENT }}"
+        Additional_Info: "{{ additional_info }}"
+
+  - name: Get Kafka pod name
+    shell: kubectl get pod -n {{ xa_ns.stdout }} | grep Running | grep 'cp-kafka-[0-9]' | awk '{print $1}' | head -n 1
+    register: kafka_pod
+    changed_when: false
+    failed_when: false
+    when: xa_ns.stdout.split('\n') | length == 1
+    #when: xa_ns.stdout_lines | length == 1
+
+  - name: Print kafka_pod
+    debug:
+      msg:
+        kafka_pod: "{{ kafka_pod }}"
+
+  - name: Fail if Kafka pod not found
+    set_fact:
+      additional_info: >-
+        [{
+          'INFO': "Kafka pod doesn't exist",
+          'STATE': 'NOK',
+          'CHECK': 'Kafka Topic Lag Check'
+        }]
+      GENERATE_EVENT: true
+    when: kafka_pod.stdout | trim == ""
+
+  - name: Run kafka-consumer-groups command
+    shell: |
+      kubectl exec -n {{ xa_ns.stdout }} {{ kafka_pod.stdout }} -c cp-kafka-broker -- \
+      bash -c 'kafka-consumer-groups --bootstrap-server localhost:9092 --describe --all-groups' | \
+      grep -E "^[a-zA-Z]" | grep -Ev "CURRENT-OFFSET"
+    register: kafka_lag_output
+    changed_when: false
+    failed_when: false
+    when: kafka_pod.stdout | trim != ""
+
+#  - name: Stub Kafka lag output to simulate lag (for testing)
+#    set_fact:
+#      kafka_lag_output:
+#        #stdout_lines: "{{ kafka_lag_output.stdout_lines + ['cdr_dumper general_cdr 1 - 0 1 consumer-cdr_dumper-1-e87c0b1a-ded5-4f7b-90b0-7e900a287d14 /10.20.102.88 consumer-cdr_dumper-1'] }}"
+#        stdout_lines: "{{ ['kpi_dumper-consumer-0 platform_kpi    1          767099          767099          5               consumer-kpi_dumper-consumer-0-2-e757c624-f337-40cb-9632-9f775ce315c8 /10.20.102.213  consumer-kpi_dumper-consumer-0-2'] }}"
+
+#  - name: Debug parsed Kafka lag lines
+#    debug:
+#      var: kafka_lag_output.stdout_lines | map('regex_findall', '\\S+') | list
+
+  - name: Parse Kafka lag and check against threshold
+    set_fact:
+      additional_info: >-
+        {{ additional_info + [{ 'INFO': 'kafka lag count in ' + item.split()[0] + '/' + item.split()[1] + '/' + item.split()[6] + ' is high (' + item.split()[5] + ').', 'STATE': 'NOK', 'CHECK': 'Kafka Topic Lag Check' }] }}
+      GENERATE_EVENT: true
+    loop: "{{ kafka_lag_output.stdout_lines }}"
+    when: item.split()[5] | int > CHECK_431_KAFKA_LAG_COUNT_THRESHOLD | int
+
+#  - name: Parse Kafka lag and check against threshold
+#    set_fact:
+#      additional_info: >-
+#        {{
+#          additional_info + [{
+#            'INFO': 'kafka lag count in ' + item[0] + '/' + item[1] + '/' + item[6] + ' is high (' + item[5] + ').',
+#            'STATE': 'NOK',
+#            'CHECK': 'Kafka Topic Lag Check'
+#          }]
+#        }}
+#      GENERATE_EVENT: true
+#    loop: >-
+#      {{
+#        kafka_lag_output.stdout_lines
+#        | map('regex_findall', '\\S+')
+#        | selectattr('5', 'defined')
+#        | selectattr('5', 'match', '^[0-9]+$')
+#        | selectattr('5', 'int', '>', CHECK_431_KAFKA_LAG_COUNT_THRESHOLD)
+#        | list
+#      }}
+#    when: kafka_lag_output.stdout_lines is defined
+
+  - name: Set OK status if no lag issues found
+    set_fact:
+      additional_info: >-
+        [{
+          'INFO': '',
+          'STATE': 'OK',
+          'CHECK': 'Kafka Topic Lag Check'
+        }]
+    when: additional_info | length == 0
+
+  - name: STATUS
+    debug:
+      msg:
+        GENERATE_EVENT: "{{ GENERATE_EVENT }}"
+        Additional_Info: "{{ additional_info }}"
+

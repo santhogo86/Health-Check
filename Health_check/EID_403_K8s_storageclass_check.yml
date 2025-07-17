@@ -1,0 +1,31 @@
+---
+- name: "{{ EID_403_DESCRIPTION }}"
+  hosts: remote_machines
+  gather_facts: no
+  vars_files:
+    - vars_working.yml
+  tasks:
+    - name: Check storage class
+      #shell: "kubectl describe sc {{ item }}"
+      raw: "{{ EID_403_CMD ~ item }} "
+      register: storage_class
+      ignore_errors: yes
+      loop: "{{ CHECK_403_K8S_STORAGECLASS_LIST.split(',') }}"
+      when: item != ""
+
+    - name: Set storage class not found fact
+      set_fact:
+        storage_class_not_found: "{{ storage_class_not_found | default([]) + [{'storage_class': item.item, 'status': 'NOK'}] }}"
+      loop: "{{ storage_class.results }}"
+      when:
+        - item.failed
+        - item.item != ""
+
+    - name: STATUS
+      debug:
+        msg:
+          GENERATE_EVENT: "{{ generate_event }}"
+          Additional Info: "{{ additional_info | to_json }}"
+      vars:
+        generate_event: "{{ storage_class_not_found | default([]) | length > 0 }}"
+        additional_info: "{{ storage_class_not_found | default([]) }}"

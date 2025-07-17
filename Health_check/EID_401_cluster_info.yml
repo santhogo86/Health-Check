@@ -1,0 +1,32 @@
+---
+- name: "{{ EID_401_DESCRIPTION }}"
+  hosts: remote_machines
+  gather_facts: no
+  vars_files:
+    - vars_working.yml
+  tasks:
+    - name: Get cluster info
+      raw: "{{ EID_401_CMD }}"
+      register: cluster_info
+      ignore_errors: yes
+
+    - name: Set services not running fact
+      set_fact:
+        services_not_running: "{{ services_not_running | default([]) + [{'service': item, 'status': 'NOK'}] }}"
+      loop: "{{ CHECK_401_CLUSTER_SERVICE_LIST.split('|') }}"
+      when:
+        - cluster_info.stdout is defined
+        - cluster_info.stdout | regex_search(item + '.*is running') is none
+
+    - name: Set default services not running fact
+      set_fact:
+        services_not_running: "{{ services_not_running | default([]) }}"
+
+    - name: STATUS
+      debug:
+        msg:
+          GENERATE_EVENT: "{{ generate_event }}"
+          Additional Info: "{{ additional_info | to_json }}"
+      vars:
+        generate_event: "{{ services_not_running | length > 0 }}"
+        additional_info: "{{ services_not_running }}"

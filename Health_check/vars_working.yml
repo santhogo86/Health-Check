@@ -1,0 +1,79 @@
+pod_name: "v4-elink-ucc-uccas-0"
+namespace: "lrb-119-uccas"
+pod_name_cms: "cms1-0"
+namespace_cms: "lrb-135-cms"
+pod_name_vlbfe: "v4-elink-ucc-vlbfe-0"
+pod_name_gtre: "v4-elink-ucc-gtre-0"
+
+pods:
+#  - 'v4-elink-ucc-gtre-0'
+  - 'v4-elink-ucc-sm-0'
+#  - 'v4-elink-ucc-uccas-1'
+  - 'v4-elink-ucc-uccas-0'
+#  - 'v4-elink-ucc-sipre-0'
+
+EID_001_CMD: "/usr/IMS/current/bin/readShm"
+EID_002_CMD: "service cms status"
+EID_004_CMD: "awk '{printf \"%.0f\n\", $1/(60)}' /proc/uptime"
+EID_005_CMD: 'ps -eo pid,lstart,cmd | grep -ai warm | grep "IMS" | grep -v "grep" | sed -e "s/?/0/g"'
+EID_006_CMD: "/bin/bash -c \"echo -e 'set screen length 0\nshow table sys platform LogConfig\nexit' | cli\""
+EID_007_CMD: "df -khP"
+EID_008_CMD: 'find  /data/storage/corefiles/ /data/storage/vmcores/ /var/log/vcm/crashes/ /var/crash/  -maxdepth 1 -type f -mmin -{{ COREFILE_THRESHOLD_MIN }} -exec ls -lrth {} \;'
+EID_302_CMD: "/sbin/ifconfig  -a | grep -i \"^[0-9a-z]\" ;"
+EID_401_CMD: "kubectl cluster-info;"
+EID_402_CMD: "kubectl get nodes --no-headers;"
+EID_403_CMD: "kubectl describe sc "
+EID_404_CMD_GET_NODE_INFO: "kubectl describe node"
+EID_404_CMD_GREP_INFO: "grep -E 'Allocated resources| cpu | memory ' | grep -A 3 'Allocated resources'"
+
+EID_001_DESCRIPTION: "Check ReadShm command output"
+EID_002_DESCRIPTION: "check CMS Service Status"
+EID_004_DESCRIPTION: "Checks system uptime"
+EID_005_DESCRIPTION: "Check Warm Process in system"
+EID_006_DESCRIPTION: "Check Log Level in config"
+EID_007_DESCRIPTION: "Check system Disk Space"
+EID_008_DESCRIPTION: "check core file generated in system"
+EID_302_DESCRIPTION: "checking UP and RUNNING interface"
+EID_401_DESCRIPTION: "Get the k8s cluster information"
+EID_402_DESCRIPTION: "Get k8s nodes ready status"
+EID_403_DESCRIPTION: "checks to see if the specified storage class exists."
+EID_404_DESCRIPTION: "Check for all management nodes configured."
+
+
+UPTIME_THRESHOLD_MIN: 60
+WARM_THRESHOLD_MIN: 60
+VOLUME_SIZE_THRESHOLD: 80
+CHECK_07_IGNORE_PARTITIONS: "Filesystem|tmpfs|sr0|/boot|/dev/shm"
+COREFILE_THRESHOLD_MIN: 60
+CHECK_302_IGNORED_INTERFACE_MAP: "mypc,^eth1$|^eth2$"
+CHECK_401_CLUSTER_SERVICE_LIST: "Kubernetes control plane|CoreDNS|Metrics-server"
+#CHECK_403_K8S_STORAGECLASS_LIST: "maap-vlb-storage1,mavenir-sc-mtcil-config,mavenir-sc-mtcil-etcd,mavenir-sc-mtcil-kafka,mavenir-sc-mtcil-zk"
+CHECK_403_K8S_STORAGECLASS_LIST: "mavenir-sc,crdl-sc"
+CHECK_404_K8S_ALLOCATED_RESOURCES_CPU_USAGE_THRESHOLD: 80
+CHECK_404_K8S_ALLOCATED_RESOURCES_MEM_USAGE_THRESHOLD: 80
+CHECK_404_K8S_ALLOCATED_RESOURCES_CPU_CHECK_IGNORE: 0
+CHECK_404_K8S_ALLOCATED_RESOURCES_MEM_CHECK_IGNORE: 0
+
+LOG_TREND_DURATION: 1
+CHECK_31_SM_ERROR_INPUT: 'No emx IP was configured|AsyncNext failed'
+CHECK_31_SM_ERROR_THRESHOLD: 0
+CHECK_32_DB_TIMEOUT_QUEUE_FAIL_INPUT: 'routing failed causeCode:3301|routing failed causeCode:3307|routing failed causeCode:3300'
+CHECK_32_DB_TIMEOUT_QUEUE_FAIL_THRESHOLD: 0
+CHECK_33_SSF_TIMEOUT_ERROR_INPUT: 'TimerSSF timeouts'
+CHECK_33_SSF_TIMEOUT_ERROR_THRESHOLD: 0
+CHECK_34_SS7_ERROR_INPUT: 'No accessible ss7Node found in GTT'
+CHECK_34_SS7_ERROR_THRESHOLD: 0
+CHECK_35_DIAM_ERROR_AND_TIMEOUT_INPUT: 'PMQ full|Resp Error .*3099'
+CHECK_35_DIAM_ERROR_AND_TIMEOUT_THRESHOLD: 0
+CHECK_36_PCRF_ERROR_INPUT: 'error rsp from pcrf or timeout'
+CHECK_36_PCRF_ERROR_THRESHOLD: 0
+CHECK_37_BDM_ERROR_INPUT: 'handleTaskComplete: Critical resource failed'
+CHECK_37_BDM_ERROR_THRESHOLD: 0
+CHECK_38_MEDIA_ERROR_SCVNF_IMS_LOG_INPUT: 'Error from media plane'
+CHECK_38_MEDIA_ERROR_SCVNF_IMS_LOG_THRESHOLD: 0
+CHECK_39_TRANSCODING_ERR_INPUT: 'Create Session failed'
+CHECK_39_TRANSCODING_ERR_THRESHOLD: 0
+CHECK_40_QUEUE_FULL_INPUT: 'queue is full'
+CHECK_40_QUEUE_FULL_THRESHOLD: 0
+CHECK_41_BLACKLIST_INPUT: 'IP Address.*is in the list'
+CHECK_416_K8S_MTU_SIZE: "1400"

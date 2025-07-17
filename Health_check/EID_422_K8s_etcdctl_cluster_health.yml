@@ -1,0 +1,58 @@
+---
+- name: etcdctl cluster health status for sm nodes
+  hosts: remote_machines
+  gather_facts: no
+  vars_files:
+    - vars_working.yml
+
+  vars:
+    additional_info: []
+    GENERATE_EVENT: false
+
+  tasks:
+
+  - name: Run etcdctl endpoint health check
+    raw: etcdctl endpoint health --cluster 2>&1
+    register: etcd_health
+    changed_when: false
+    failed_when: false
+
+  - name: Parse etcd health output and determine status
+    set_fact:
+      additional_info: >-
+        {{
+          [{
+            'INFO': 'cluster is not healthy [' + unhealthy_nodes | join(', ') + ']',
+            'STATE': 'NOK',
+            'CHECK': 'SM etcdctl health status'
+          }]
+        }}
+      GENERATE_EVENT: true
+    vars:
+      unhealthy_nodes: >-
+        {{
+          etcd_health.stdout_lines
+          | select("search", "unhealthy")
+          | map("regex_search", "^(\\S+)")
+          | list
+        }}
+    when: unhealthy_nodes | length > 0
+
+  - name: Set OK status if all nodes are healthy
+    set_fact:
+      additional_info: >-
+        {{
+          [{
+            'INFO': '',
+            'STATE': 'OK',
+            'CHECK': 'SM etcdctl health status'
+          }]
+        }}
+    when: additional_info | length == 0
+
+  - name: STATUS
+    debug:
+      msg:
+        GENERATE_EVENT: "{{ GENERATE_EVENT }}"
+        Additional_Info: "{{ additional_info }}"
+

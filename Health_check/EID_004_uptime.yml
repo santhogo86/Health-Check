@@ -1,0 +1,29 @@
+---
+- name: Check system uptime
+  hosts: remote_machines
+  gather_facts: no
+  vars_files:
+    - vars_working.yml
+  tasks:
+    - name: Check system uptime
+      raw: kubectl exec {{ pod_name }} -n {{ namespace }} -- awk '{printf "%.0f\n", $1/(60)}' /proc/uptime;
+      register: system_uptime
+
+    - name: Print system uptime and its expected limit
+      debug:
+        msg:
+          - "system uptime = {{ system_uptime.stdout }} min"
+          - "UPTIME_THRESHOLD_MIN = {{ UPTIME_THRESHOLD_MIN }}"
+
+    - name: Check if system uptime is within the limit
+      set_fact:
+        generate_event: "{{ system_uptime.stdout | int >= UPTIME_THRESHOLD_MIN }}"
+      register: check_results
+
+    - name: STATUS
+      debug:
+        msg:
+          {
+            "GENERATE_EVENT": "{{ not check_results.ansible_facts.generate_event }}",
+            "Additional Info": "{{ 'Mins=' ~ system_uptime.stdout ~ ', Uptime threshold not met' if not check_results.ansible_facts.generate_event else '' }}"
+          }

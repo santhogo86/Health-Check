@@ -1,0 +1,24 @@
+---
+- name: "{{ EID_402_DESCRIPTION }}"
+  hosts: remote_machines
+  gather_facts: no
+  vars_files:
+    - vars_working.yml
+  tasks:
+    - name: Get k8s nodes
+      raw: "{{ EID_402_CMD }}"
+      register: nodes
+      ignore_errors: yes
+
+    - name: Check node status
+      set_fact:
+        not_ready_nodes: "{{ nodes.stdout_lines | select('match', '^(.*?)\\s+(NotReady|Unknown)') | map('regex_replace', '^(.*?)\\s+(.*?)\\s+(.*)$', '{\"node\": \"\\1\", \"status\": \"\\2\", \"type\": \"\\3\"}') | list }}"
+
+    - name: STATUS
+      debug:
+        msg:
+          GENERATE_EVENT: "{{ generate_event }}"
+          Additional Info: "{{ additional_info | to_json }}"
+      vars:
+        generate_event: "{{ not_ready_nodes | length > 0 }}"
+        additional_info: "{{ not_ready_nodes }}"

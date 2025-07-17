@@ -1,0 +1,57 @@
+---
+- name: IP Assignment Check
+  hosts: remote_machines
+  gather_facts: no
+  vars_files:
+    - vars_working.yml
+
+  vars:
+    CHECK_430_IP_ASSIGNMENT_INTERFACE_LIST: "eth0,eth1"
+    additional_info: []
+    GENERATE_EVENT: false
+
+  tasks:
+
+  - name: Get IP address info from pod
+    raw: kubectl exec {{ pod_name_vlbfe }} -n {{ namespace }} -- ip a | awk '$1 ~ /^[0-9]/{ split($2, arr, "@");gsub(/:/,"",arr[1]);};$1~"inet"{print arr[1]""$0}'
+    register: ip_output
+    changed_when: false
+    failed_when: false
+
+#  - name: Stub IP output to simulate missing IP assignment (for testing)
+#    set_fact:
+#      ip_output:
+#        stdout: ""
+
+  - name: Check each interface for IP assignment
+    set_fact:
+      additional_info: >-
+        {{
+          additional_info + [{
+            'INFO': 'interface ' + interface + ' is not having any ip assigned or does not exists.',
+            'STATE': 'NOK',
+            'CHECK': 'IP Assignment Check'
+          }]
+        }}
+      GENERATE_EVENT: true
+    loop: "{{ CHECK_430_IP_ASSIGNMENT_INTERFACE_LIST.split(',') }}"
+    loop_control:
+      loop_var: interface
+    when: ip_output.stdout is not search(interface ~ ' .*inet.*scope.*global')
+
+  - name: Set OK status if all interfaces have IPs
+    set_fact:
+      additional_info: >-
+        [{
+          'INFO': '',
+          'STATE': 'OK',
+          'CHECK': 'IP Assignment Check'
+        }]
+    when: additional_info | length == 0
+
+  - name: STATUS
+    debug:
+      msg:
+        GENERATE_EVENT: "{{ GENERATE_EVENT }}"
+        Additional_Info: "{{ additional_info }}"
+

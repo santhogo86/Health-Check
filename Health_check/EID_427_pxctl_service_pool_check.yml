@@ -1,0 +1,13 @@
+---
+- name: "{{ EID_427_DESCRIPTION }}"
+  hosts: remote_machines
+  gather_facts: no
+  vars_files:
+    - vars.yml
+  tasks:
+    - name: Executing Command
+      raw: kubectl exec {{ pod_name }} -n {{ namespace }} -- {{ EID_427_CMD }}
+      register: cmdOutput
+    - name: Printing command output
+      debug:
+        msg: "command output = {{ cmdOutput.stdout }}"

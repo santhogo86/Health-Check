@@ -1,0 +1,38 @@
+Not tested:
+EID_422_K8s_etcdctl_cluster_health.yml, Not Tested, etcdctl command not found
+EID_424_iptables_check.yml, Not Tested, sm nodes not configured with any firewall rules
+EID_428_cdr_temp_check.yml not tested XA do not have CDR configured
+EID_429_cdr_transferred_check.yml not tested XA do not have CDR configured
+
+Completed yml files:
+EID_001_readShm.yml
+EID_002_cmsStatus.yml
+EID_004_uptime.yml
+EID_005_warm.yml
+EID_006_logfile.yml
+EID_007_diskspace.yml
+EID_008_core_file.yml
+EID_302_Interface_Status_Check.yml
+EID_401_cluster_info.yml
+EID_402_k8s_Node_Status.yml
+EID_403_K8s_storageclass_check.yml
+EID_404_K8s_Allocated_resources_CPU_MEM_usage_check.yml
+EID_031_sm_error_instant.yml
+EID_031_sm_error_trend.yml
+EID_405_K8s_CPU_Affinity_check.yml
+EID_406_Node_port_status_check.yml
+EID_410_CPU_MEM_Monitoring.yml
+EID_414_tunnel_check.yml
+EID_415_K8s_Core_file_pattern_check.yml
+EID_416_K8s_MTU_Size_check.yml
+EID_418_K8s_5GCcmHBTTL_check.yml
+EID_419_K8s_Dupliacte_ip_check.yml
+EID_420_K8s_application_wise_port_check.yml
+EID_421_UCCAS_application_wise_port_check.yml
+EID_430_ip_assignment_check.yml
+EID_431_kafka_lag_check.yml
+EID_432_worker_pleg_is_not_healthy_error.yml
+EID_433_worker_hardware_error.yml
+EID_436_OC_MachineConfigPool_Status.yml
+EID_437_OC_ClusterOperator_Status.yml
+EID_438_OC_NodeNetworkConfigurationPolicy_Status.yml
