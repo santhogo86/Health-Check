@@ -1,0 +1,84 @@
+---
+- name: Master Health Check Script for Commands 6-10
+  hosts: remote_machines
+  gather_facts: yes
+  vars_files:
+    - vars_working.yml
+  
+  tasks:
+    - name: Remove existing CSV file
+      file:
+        path: "./health_check_results_2.csv"
+        state: absent
+      delegate_to: localhost
+
+    - name: Create CSV header
+      lineinfile:
+        path: "./health_check_results_2.csv"
+        line: "ID,Description,Result"
+        create: yes
+        state: present
+      delegate_to: localhost
+
+    - name: Execute EID_006 - Core-file Status Check
+      include: EID_006_coreFile.yml
+
+    - name: Write EID_006 result to CSV
+      lineinfile:
+        path: "./health_check_results_2.csv"
+        line: "6,{{ EID_006_DESCRIPTION }},{{ eid_006_final_result }}"
+        state: present
+      delegate_to: localhost
+
+    - name: Execute EID_007 - Peer IP / VNF Check
+      include: EID_007_peerVnf.yml
+
+    - name: Write EID_007 result to CSV
+      lineinfile:
+        path: "./health_check_results_2.csv"
+        line: "7,{{ EID_007_DESCRIPTION }},{{ eid_007_final_result }}"
+        state: present
+      delegate_to: localhost
+
+    - name: Execute EID_008 - VNF Active Alarm Check
+      include: EID_008_activeAlarms.yml
+
+    - name: Write EID_008 result to CSV
+      lineinfile:
+        path: "./health_check_results_2.csv"
+        line: "8,{{ EID_008_DESCRIPTION }},{{ eid_008_final_result }}"
+        state: present
+      delegate_to: localhost
+
+    - name: Execute EID_009 - Ovld Error Check
+      include: EID_009_ovldError.yml
+
+    - name: Write EID_009 result to CSV
+      lineinfile:
+        path: "./health_check_results_2.csv"
+        line: "9,{{ EID_009_DESCRIPTION }},{{ eid_009_final_result }}"
+        state: present
+      delegate_to: localhost
+
+    - name: Execute EID_010 - ARP Incomplete Check
+      include: EID_010_arpIncomplete.yml
+
+    - name: Write EID_010 result to CSV
+      lineinfile:
+        path: "./health_check_results_2.csv"
+        line: "10,{{ EID_010_DESCRIPTION }},{{ eid_010_final_result }}"
+        state: present
+      delegate_to: localhost
+
+    - name: Display results summary
+      debug:
+        msg: "Health check for commands 6-10 completed. Results saved to health_check_results_2.csv"
+
+    - name: Show CSV contents
+      command: cat ./health_check_results_2.csv
+      register: csv_contents
+      delegate_to: localhost
+
+    - name: Display CSV contents
+      debug:
+        msg: "{{ csv_contents.stdout }}"

@@ -1,0 +1,33 @@
+- name: Execute Uptime Status Check Command
+  shell: kubectl exec {{ pod_name }} -n {{ namespace }} -- {{ EID_002_CMD }}
+  register: cmdOutput
+  ignore_errors: yes
+
+- name: Display command output
+  debug:
+    msg: "Command output: {{ cmdOutput.stdout | default('No output in check mode') }}"
+
+- name: Execute uptime minutes command
+  shell: kubectl exec {{ pod_name }} -n {{ namespace }} -- awk '{printf "%.0f\n", $1/60}' /proc/uptime
+  register: uptimeMinutes
+  ignore_errors: yes
+
+- name: Extract uptime in minutes
+  set_fact:
+    system_uptime_minutes: "{{ uptimeMinutes.stdout | int | default(0) }}"
+
+- name: Check uptime threshold
+  set_fact:
+    uptime_threshold_check: "{{ 'PASS' if (uptime_threshold_min | int >= system_uptime_minutes | int) else 'FAIL' }}"
+
+- name: Determine final result
+  set_fact:
+    final_result: "{{ uptime_threshold_check }}"
+
+- name: Result
+  debug:
+    msg: "{{ final_result }} - System uptime: {{ system_uptime_minutes }} minutes, Threshold: {{ uptime_threshold_min }} minutes"
+
+- name: Set final result for EID_002
+  set_fact:
+    eid_002_final_result: "{{ final_result }}"

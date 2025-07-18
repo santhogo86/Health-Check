@@ -1,0 +1,6 @@
+ID,Description,Result
+6,check core file generated in system,PASS
+7,check Peer IP / VNF,PASS
+8,Get VNF Active alarms list,FAIL
+9,Check Olvd Error status,PASS
+10,Check ARP Incomplete status,PASS

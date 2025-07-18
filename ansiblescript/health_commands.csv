@@ -1,0 +1,6 @@
+ID,Name,Description,Command,Pass Criteria,Applicable for App Type
+1,readShm Status,Check ReadShm command output,/usr/IMS/current/bin/readShm;,Ovld Level == 0; Process State == STATE_INS_ACTIVE; vnfHAMode == ACTIVE or HOT_STANDBY; LCM Event == StartSuccess; vnfState == ConfiguredActive; if node type == fe|asbcsip|asbcsre|asbcupc|vlb There should be Active/Standby Pair.,uccas
+2,Uptime Status,Checks system uptime,"uptime; awk '{printf ""%.0f\n"" $1/(60)}' /proc/uptime;",Config variable UPTIME_THRESHOLD_MIN >= system uptime min,uccas
+3,Warm Process Status,Check Warm Process in system,ps -eo pid lstart cmd | grep -ai warm | grep 'IMS' | grep -v 'grep' | sed -e 's/\?/0/g';,Config variable WARM_THRESHOLD_MIN >= process time,uccas
+4,Log Level Config Status,Check Log Level in config,/bin/bash -c \"echo -e 'set screen length 0\nshow table sys platform LogConfig\nexit' | cli\";,LOG_CONFIG_LEVEL_DEBUG should not enabled. and cli command should be working,uccas
+5,Disk Space Status,Check system Disk Space,df -khP;,Partition size must be less than config variable VOLUME_SIZE_THRESHOLH,uccas

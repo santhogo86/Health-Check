@@ -1,0 +1,6 @@
+ID,Description,Result
+1,Check ReadShm command output,PASS
+2,Checks system uptime,FAIL
+3,Check Warm Process in system,PASS
+4,Check Log Level in config,FAIL
+5,Check system Disk Space,PASS

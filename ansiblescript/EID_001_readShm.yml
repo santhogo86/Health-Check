@@ -1,0 +1,44 @@
+- name: Execute ReadShm Status Check Command
+  shell: kubectl exec {{ pod_name }} -n {{ namespace }} -- {{ EID_001_CMD }}
+  register: cmdOutput
+  ignore_errors: yes
+
+- name: Display command output
+  debug:
+    msg: "Command output: {{ cmdOutput.stdout | default('No output in check mode') }}"
+
+- name: Parse ReadShm output
+  set_fact:
+    readshm_output: "{{ cmdOutput.stdout | default('') }}"
+
+- name: Check Ovld Level
+  set_fact:
+    ovld_level_check: "{{ 'PASS' if ('vnfc Ovld Level  :  0' in readshm_output or 'Ovld Level == 0' in readshm_output) else 'FAIL' }}"
+
+- name: Check Process State
+  set_fact:
+    process_state_check: "{{ 'PASS' if 'STATE_INS_ACTIVE' in readshm_output else 'FAIL' }}"
+
+- name: Check vnfHAMode
+  set_fact:
+    vnf_ha_mode_check: "{{ 'PASS' if ('vnfcHAMode     :  ACTIVE' in readshm_output or 'vnfcHAMode     :  HOT_STANDBY' in readshm_output) else 'FAIL' }}"
+
+- name: Check LCM Event
+  set_fact:
+    lcm_event_check: "{{ 'PASS' if ('Start Success' in readshm_output or 'StartSuccess' in readshm_output) else 'FAIL' }}"
+
+- name: Check vnfState
+  set_fact:
+    vnf_state_check: "{{ 'PASS' if ('Configured Active' in readshm_output or 'ConfiguredActive' in readshm_output) else 'FAIL' }}"
+
+- name: Determine overall result
+  set_fact:
+    final_result: "{{ 'PASS' if (ovld_level_check == 'PASS' and process_state_check == 'PASS' and vnf_ha_mode_check == 'PASS' and lcm_event_check == 'PASS' and vnf_state_check == 'PASS') else 'FAIL' }}"
+
+- name: Result
+  debug:
+    msg: "{{ final_result }}"
+
+- name: Set final result for EID_001
+  set_fact:
+    eid_001_final_result: "{{ final_result }}"

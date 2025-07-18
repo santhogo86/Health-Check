@@ -1,0 +1,45 @@
+- name: Execute ARP Incomplete Check Command
+  shell: kubectl exec {{ pod_name }} -n {{ namespace }} -- {{ EID_010_CMD }}
+  register: cmdOutput
+  ignore_errors: yes
+
+- name: Display command output
+  debug:
+    msg: "Command output: {{ cmdOutput.stdout | default('No output in check mode') }}"
+
+- name: Parse ARP incomplete output
+  set_fact:
+    arp_incomplete_output: "{{ cmdOutput.stdout | default('') }}"
+
+- name: Check for incomplete ARP entries
+  set_fact:
+    incomplete_arp_found: "{{ 'incomplete' in arp_incomplete_output.lower() or arp_incomplete_output | length > 0 }}"
+
+- name: Filter ignored IPs if configured
+  set_fact:
+    filtered_arp_output: "{{ arp_incomplete_output }}"
+  when: check_25_arp_ignore_ips is not defined or check_25_arp_ignore_ips | length == 0
+
+- name: Apply IP ignore filter if configured
+  set_fact:
+    filtered_arp_output: "{{ arp_incomplete_output | regex_replace(ignore_ip, '') }}"
+  vars:
+    ignore_ip: "{{ item }}"
+  with_items: "{{ check_25_arp_ignore_ips | default([]) }}"
+  when: check_25_arp_ignore_ips is defined and check_25_arp_ignore_ips | length > 0
+
+- name: Check filtered output for incomplete entries
+  set_fact:
+    final_incomplete_found: "{{ 'incomplete' in (filtered_arp_output | default('')).lower() }}"
+
+- name: Determine final result
+  set_fact:
+    final_result: "{{ 'FAIL' if final_incomplete_found else 'PASS' }}"
+
+- name: Result
+  debug:
+    msg: "{{ final_result }} - ARP incomplete check: {{ 'Incomplete entries found' if final_incomplete_found else 'No incomplete entries' }}"
+
+- name: Set final result for EID_010
+  set_fact:
+    eid_010_final_result: "{{ final_result }}"

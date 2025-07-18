@@ -1,0 +1,6 @@
+ID,Name,Description,Command,Pass Criteria,Applicable for App Type
+6,Core-file Status,check core file generated in system,find /data/storage/corefiles/ /data/storage/vmcores/ /var/log/vcm/crashes/ /var/crash/ -maxdepth 1 -type f -mmin -$COREFILE_THRESHOLD_MIN -exec ls -lrth {} \;,no core file generated with in config variable COREFILE_THRESHOLD_MIN,uccas
+7,Peer IP / VNF,check Peer IP / VNF,/bin/bash -c \"echo 'show table sys platform peer_vnf | nomore' | cli; echo 'show table sys platform peer_ip | nomore' | cli\";,All VNF ID's should be available in both and match CMS inventory. Note: If CMS_INVENTORY_FILE_PULL ==0 it will only check VNF ids in peer_vnf and peer_ip. Multiple LvnID found All the peer_vnf_lvnid should match with vnfid of readShm or *SDNS*.,uccas
+8,VNF Active Alarm,Get VNF Active alarms list,/bin/bash -c \"echo 'show active-alarms| nomore' |cli\"; [ Checks for severity in the alarms],This check will pass if the severity alarm count is empty.,uccas
+9,Ovld Error,Check Olvd Error status,$SUDO /usr/IMS/current/bin/readShm -o | grep -av 'Ovld Level:0' | grep -aic 'Ovld Level';,ovld error status should be zero,uccas
+10,ARP Incomplete,Check ARP Incomplete status,arp -n | grep inc ;,CHECK_25_ARP_IGNORE_IPS,uccas

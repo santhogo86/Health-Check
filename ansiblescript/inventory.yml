@@ -1,0 +1,6 @@
+remote_machines:
+  hosts:
+    remote_machine1:
+      ansible_host: 10.69.95.51
+      ansible_user: LRB_914_AIML
+      ansible_password: Mavenir123
